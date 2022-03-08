@@ -12409,16 +12409,56 @@ if {[tk windowingsystem] eq "aqua"} {
     set ctxbut <Button-3>
 }
 
+set selecthead {}
+set selectheadid {}
+
+set revtreeargs {}
+set cmdline_files {}
+set i 0
+set revtreeargscmd {}
+set customconfigfile {}
+foreach arg $argv {
+    switch -glob -- $arg {
+	"" { }
+	"--" {
+	    set cmdline_files [lrange $argv [expr {$i + 1}] end]
+	    break
+	}
+	"--select-commit=*" {
+	    set selecthead [string range $arg 16 end]
+	}
+	"--argscmd=*" {
+	    set revtreeargscmd [string range $arg 10 end]
+	}
+	"--custom-config=*" {
+	    set customconfigfile [string range $arg 16 end]
+	}
+	default {
+	    lappend revtreeargs $arg
+	}
+    }
+    incr i
+}
+
 catch {
+    if {$customconfigfile ne {}} {
+    set config_file $customconfigfile
+    } elseif {[info exists env(XDG_CONFIG_HOME)] && $env(XDG_CONFIG_HOME) ne ""} {
+    # follow the XDG base directory specification by default. See
+    # http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
+    set config_file [file join $env(XDG_CONFIG_HOME) git gitk]
+    } else {
+    # default XDG_CONFIG_HOME
+	set config_file "~/.config/git/gitk"
+    }
+
     # follow the XDG base directory specification by default. See
     # http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
     if {[info exists env(XDG_CONFIG_HOME)] && $env(XDG_CONFIG_HOME) ne ""} {
 	# XDG_CONFIG_HOME environment variable is set
-	set config_file [file join $env(XDG_CONFIG_HOME) git gitk]
 	set config_file_tmp [file join $env(XDG_CONFIG_HOME) git gitk-tmp]
     } else {
 	# default XDG_CONFIG_HOME
-	set config_file "~/.config/git/gitk"
 	set config_file_tmp "~/.config/git/gitk-tmp"
     }
     if {![file exists $config_file]} {
@@ -12471,33 +12511,6 @@ setoptions
 if {[catch {set gitdir [exec git rev-parse --git-dir]}]} {
     show_error {} . [mc "Cannot find a git repository here."]
     exit 1
-}
-
-set selecthead {}
-set selectheadid {}
-
-set revtreeargs {}
-set cmdline_files {}
-set i 0
-set revtreeargscmd {}
-foreach arg $argv {
-    switch -glob -- $arg {
-	"" { }
-	"--" {
-	    set cmdline_files [lrange $argv [expr {$i + 1}] end]
-	    break
-	}
-	"--select-commit=*" {
-	    set selecthead [string range $arg 16 end]
-	}
-	"--argscmd=*" {
-	    set revtreeargscmd [string range $arg 10 end]
-	}
-	default {
-	    lappend revtreeargs $arg
-	}
-    }
-    incr i
 }
 
 if {$selecthead eq "HEAD"} {
